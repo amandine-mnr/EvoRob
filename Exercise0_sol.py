@@ -9,19 +9,18 @@ from src.utils.Filesys import get_project_root
 
 """ Large programming projects are often modularised in different components. 
     In the upcoming exercise(s) we will (re)build an evolutionary pipeline for robot evolution in MuJoCo.
-    
+
     Exercise0 warm-up: This exercise is a warm-up to understanding the flow of information in the software. 
     In the previous exercise you built your own Evolutionary Strategy which will be used to optimise the parameters
-    in the reversed Ackley environment. Additionally, we will integrate the original cmaes code built by Hansen et al.:
-    https://cma-es.github.io/index.html
+    in the reversed Ackley environment.
 """
 
 ROOT_DIR = get_project_root()
 ENV_NAME = 'InverseAckley'
 
 
-#%% Q0.1
-#TODO: understanding the world
+# %% Q0.1
+# TODO: understanding the world
 class AckleyWorld(World):
     def __init__(self):
         self.n_params = 2
@@ -36,8 +35,7 @@ class AckleyWorld(World):
         return fitness
 
 
-class MyWorld(World): #TODO
-
+class MyWorld(World):
     def __init__(self):
         self.n_params = 2
 
@@ -63,12 +61,12 @@ def run_EA(ea, world):
 
 
 def main():
-    #%% Q0.1
+    # %% Q0.1
     world = AckleyWorld()
     n_parameters = world.n_params  # only x,y params are optimised
 
-    #%% Q0.2
-    #TODO: Take your previous exercise code and add it to the ES python class
+    # %% Q0.2
+    # TODO: Take your previous exercise code and add it to the ES python class
     ES_opts["min"] = -4
     ES_opts["max"] = 4
     ES_opts["num_parents"] = 100
@@ -76,13 +74,13 @@ def main():
     ES_opts["mutation_sigma"] = 2.5
     population_size = ES_opts["num_parents"]
     results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'ES')
-    ea = ES(population_size, n_parameters, ES_opts, results_dir)
+    ea = ES(100, n_parameters, ES_opts, results_dir)
 
-    #%% Optimise
+    # %% Optimise
     run_EA(ea, world)
 
-    #%% Report results
-    #TODO: Load the results and make a fitness curve plot.
+    # %% Report results
+    # TODO: Load the results and make a fitness curve plot.
     fitnesses_full = np.load(os.path.join(results_dir, 'full_f.npy'))
 
     mean_f = np.mean(fitnesses_full, axis=1)
@@ -95,20 +93,21 @@ def main():
     plt.savefig('Ackley_f.pdf')
     plt.close()
 
-
-    #%% Change the World
-    #TODO: Implement your world
+    # %% Change the World
+    # TODO: Implement your world
     myworld = MyWorld()
+    n_parameters = myworld.n_params
+
+    ea = ES(100, n_parameters, ES_opts, results_dir)
     run_EA(ea, myworld)
 
-
-    #%% Change the EA
-    #TODO: Change the ea function
+    # %% Change the EA
+    # TODO: Change the ea function
     from src.EA.CMAES_sol import CMAES, CMAES_opts
-    CMAES_opts["min"]= -4
-    CMAES_opts["max"]= 4
-    CMAES_opts["num_generations"]= 100
-    CMAES_opts["mutation_sigma"]= 0.3
+    CMAES_opts["min"] = -4
+    CMAES_opts["max"] = 4
+    CMAES_opts["num_generations"] = 100
+    CMAES_opts["mutation_sigma"] = 0.3
     results_dir_cmaes = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'CMAES')
     ea = CMAES(population_size, n_parameters, CMAES_opts, results_dir_cmaes)
 
