@@ -1,4 +1,4 @@
-from src.EA.CMAES import CMAES, CMAES_opts
+from src.EA.CMAES_sol import CMAES, CMAES_opts
 from src.world.World import World
 from src.world.robot.morphology.PassiveWalkerRobot import PassiveWalkerRobot
 from src.utils.Filesys import get_project_root
