@@ -163,7 +163,7 @@ class PassiveWalkerEnv(MujocoEnv, utils.EzPickle):
             terminated = True
         if self.data.qpos[2] < self.init_z_offset + 0.25 - self.data.qpos[0]*np.tan(5*np.pi/180):
             print(f"Walker Fell off the platform at {self.data.qpos[0]} meter!!")
-            terminated = True
+            terminated = False
         if np.abs(self.data.qpos[0] - self.previous_state[0])<1e-4:
             self.stuck += 1
             if self.stuck > 10/self.dt:

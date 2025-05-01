@@ -21,7 +21,7 @@ ENV_NAME = "PassiveWalker-v0"
 
 class PassiveWalkerWorld(World):
     def __init__(self, ):
-        self.n_params = 6
+        self.n_params = 3
         self.world_file = os.path.join(ROOT_DIR, "PassiveWalkerEnv.xml")
         self.slope_height = np.sin(5 * np.pi / 180) * 5
         self.env = gym.make(
@@ -33,21 +33,21 @@ class PassiveWalkerWorld(World):
 
     def geno2pheno(self, genotype):
         # TODO Improve the genotype to phenotype mapping
-        assert len(genotype) == 6
-        right_up_leg, right_low_leg, right_foot, left_up_leg, left_low_leg, left_foot = genotype
+        assert len(genotype) == 3
+        up_leg, low_leg, foot = genotype
 
         # Define the 3D coordinates of the relative tree structure
-        right_hip_xyz   = np.array([0         ,-0.05    , 0            ])
-        right_knee_xyz  = np.array([0         , 0       ,-right_up_leg ]) + right_hip_xyz
-        right_ankle_xyz = np.array([0         , 0       ,-right_low_leg]) + right_knee_xyz
-        right_toe1_xyz  = np.array([right_foot,-0.025   , 0            ]) + right_ankle_xyz
-        right_toe2_xyz  = np.array([0         , 0.06    , 0            ]) + right_toe1_xyz
+        right_hip_xyz = np.array([0, -0.05, 0])
+        right_knee_xyz = np.array([0, 0, -up_leg]) + right_hip_xyz
+        right_ankle_xyz = np.array([0, 0, -low_leg]) + right_knee_xyz
+        right_toe1_xyz = np.array([foot, -0.025, 0]) + right_ankle_xyz
+        right_toe2_xyz = np.array([0, 0.06, 0]) + right_toe1_xyz
 
-        left_hip_xyz    = np.array([0         , 0.05    , 0            ])
-        left_knee_xyz   = np.array([0         , 0       ,-left_up_leg  ]) + left_hip_xyz
-        left_ankle_xyz  = np.array([0         , 0       ,-left_low_leg ]) + left_knee_xyz
-        left_toe1_xyz   = np.array([left_foot , 0.025   , 0            ]) + left_ankle_xyz
-        left_toe2_xyz   = np.array([0         ,-0.06    , 0            ]) + left_toe1_xyz
+        left_hip_xyz = np.array([0, 0.05, 0])
+        left_knee_xyz = np.array([0, 0, -up_leg]) + left_hip_xyz
+        left_ankle_xyz = np.array([0, 0, -low_leg]) + left_knee_xyz
+        left_toe1_xyz = np.array([foot, 0.025, 0]) + left_ankle_xyz
+        left_toe2_xyz = np.array([0, -0.06, 0]) + left_toe1_xyz
 
         points = np.vstack([right_hip_xyz, right_knee_xyz, right_ankle_xyz, right_toe1_xyz, right_toe2_xyz,
                             left_hip_xyz, left_knee_xyz, left_ankle_xyz, left_toe1_xyz, left_toe2_xyz, ])
@@ -136,7 +136,6 @@ def generate_best_individual_video(world, video_name: str = 'EvoRob2_video.mp4')
 def visualise_individual(genotype):
     world = PassiveWalkerWorld()
     points, connectivity_mat = world.geno2pheno(genotype)
-    print('points : ', points)
     robot = PassiveWalkerRobot(points, connectivity_mat, world.joint_limits, verbose=False)
     robot.xml = robot.define_robot()
     robot.write_xml()
@@ -169,8 +168,7 @@ def visualise_individual(genotype):
 
 def main():
     # %% Understanding the world
-    genotype = [0.3, 0.2, 0.1,
-                0.3, 0.2, 0.1]
+    genotype = [0.3, 0.2, 0.1,]
     visualise_individual(genotype)
 
     # %% Defining environment
@@ -179,13 +177,13 @@ def main():
 
     results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'CMAES')
 
-    CMAES_opts["min"] = 0
+    CMAES_opts["min"] = 0.1
     CMAES_opts["max"] = 0.5
-    CMAES_opts["num_parents"] = 100
+    CMAES_opts["num_parents"] = 250
     CMAES_opts["num_generations"] = 100
     CMAES_opts["mutation_sigma"] = 0.33
 
-    population_size = 100
+    population_size = 250
 
     ea = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
 
@@ -194,7 +192,7 @@ def main():
 
     # %% visualise
     # TODO: Make a video of the best individual, and plot the fitness curve.
-    best_individual = np.load(os.path.join(results_dir, f"{CMAES_opts["num_generations"]-1}", "x_best.npy"))
+    best_individual = np.load(os.path.join(results_dir, "99", "x_best.npy"))
 
     points, connectivity_mat = world.geno2pheno(best_individual)
     robot = PassiveWalkerRobot(points, connectivity_mat, world.joint_limits, verbose=False)
@@ -213,5 +211,5 @@ def main():
     generate_best_individual_video(world)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

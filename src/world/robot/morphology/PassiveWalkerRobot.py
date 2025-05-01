@@ -18,7 +18,7 @@ properties = {
 
     "joint": {"armature": f"{0.00}", "damping": f"{0.01}", "axis": "0 -1 0", "range": "-150 0"},
     "geom": {"margin": f"{0.001}"},
-    "rods": {"density": f"{density_rod}", "size": f"{radius}", "rgba": "0.75 0.75 0.75 1.0"},
+    "rods": {"density": f"{density_rod}", "size": f"{radius}", "rgba": "0.2 0.0 0.95 1.0"},
     "connect": {"type": "sphere", "density": f"{density_connect}", "size": f"{radius*1.1}", "rgba": "0.5 0.1 0.1 1.0"},
 }
 
@@ -127,7 +127,7 @@ class PassiveWalkerRobot:
             xml.SubElement(walker_xml, "joint", attrib={"type": "free"})
 
         xml.SubElement(walker_xml, "geom", attrib={"type": "sphere",
-                                                       "rgba": "0.75 0.75 0.75 1.0",
+                                                       "rgba": "0.65 0.0 0.95 1.0",
                                                        "size": "0.05",
                                                        "mass": "0.02"})
 
