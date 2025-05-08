@@ -103,9 +103,11 @@ class PassiveWalkerWorld(World):
 
 def run_EA(ea, world):
     for gen in range(ea.n_gen):
+        print("gen ", gen)
         pop = ea.ask()
         fitnesses_gen = np.empty(ea.n_pop)
         for index, genotype in enumerate(pop):
+            #print("debug2##########")
             fit_ind = world.evaluate_individual(genotype)
             fitnesses_gen[index] = fit_ind
         ea.tell(pop, fitnesses_gen)
@@ -130,6 +132,7 @@ def generate_best_individual_video(world, video_name: str = 'EvoRob2_video.mp4')
 
     import imageio
     imageio.mimsave(video_name, frames, fps=30)  # Set frames per second (fps)
+    print(f"Saving video with {len(frames)} frames to {video_name}")
     env.close()
 
 
@@ -168,7 +171,7 @@ def visualise_individual(genotype):
 
 def main():
     # %% Understanding the world
-    genotype = [0.3, 0.2, 0.1,]
+    genotype = [0.5, 0.2, 0.1,]
     visualise_individual(genotype)
 
     # %% Defining environment
@@ -188,12 +191,18 @@ def main():
     ea = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
 
     # %% Optimise
+    #print("AAAAAAAAAAAAAAAAAAAAAAAAAA")
     run_EA(ea, world)
+    #print("BBBBBBBBBBBBBBBBBBBBBBBBBBB")
 
     # %% visualise
     # TODO: Make a video of the best individual, and plot the fitness curve.
-    best_individual = np.load(os.path.join(results_dir, "99", "x_best.npy"))
-
+    #best_individual = np.load(os.path.join(results_dir, "99", "x_best.npy"))
+    #before sol :#########
+    #print("11111111111111111111111111111111111111111111")
+    best_individual = np.load(os.path.join(results_dir, f"{CMAES_opts["num_generations"]-1}", "x_best.npy"))
+    ######################
+    #print("222222222222222222222222222222222")
     points, connectivity_mat = world.geno2pheno(best_individual)
     robot = PassiveWalkerRobot(points, connectivity_mat, world.joint_limits, verbose=False)
     robot.xml = robot.define_robot()
@@ -208,6 +217,7 @@ def main():
     with open(world.world_file, "w") as f:
         f.write(world_xml)
 
+    #print("test debuuuuug###############################################")
     generate_best_individual_video(world)
 
 

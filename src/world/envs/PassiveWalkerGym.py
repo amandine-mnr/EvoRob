@@ -7,6 +7,8 @@ from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.spaces import Box
 from src.utils.geometry import quat2rot
 
+step_nb = 0
+
 DEFAULT_CAMERA_CONFIG = {
     "distance": 4.5,
     "lookat": np.array([2.1, 0, 0]),
@@ -131,6 +133,10 @@ class PassiveWalkerEnv(MujocoEnv, utils.EzPickle):
 
 
     def step(self, action):
+
+        global step_nb
+
+        step_nb = step_nb + 1
         xy_position_before = self.data.body(self._main_body).xpos[:2].copy()
         if self.body_ids is not None:
             self.apply_force()
@@ -140,7 +146,11 @@ class PassiveWalkerEnv(MujocoEnv, utils.EzPickle):
         xy_velocity = (xy_position_after - xy_position_before) / self.dt
         x_velocity, y_velocity = xy_velocity
 
-        forward_reward = x_velocity * self._forward_reward_weight
+        forward_reward = (x_velocity + step_nb) * self._forward_reward_weight
+        # expected_z_vel = -x_velocity * np.tan(5*2*np.pi/360.0)
+        # z_velocity_error = self.data.qvel[2] - expected_z_vel
+        # z_stability_penalty = -0.1 * abs(z_velocity_error)
+        # penalty = -0.1*y_velocity + z_stability_penalty
 
         #TODO
         reward = forward_reward
@@ -161,14 +171,16 @@ class PassiveWalkerEnv(MujocoEnv, utils.EzPickle):
             DOF = np.argwhere((np.isnan(qacc)) + (np.isinf(qacc)) + (np.abs(qacc) > 1e6)).squeeze()
             print(ValueError(f'MuJoCo Warning: Nan, Inf or huge value in QACC at DOF {DOF}'))
             terminated = True
+            step_nb = 0
         if self.data.qpos[2] < self.init_z_offset + 0.25 - self.data.qpos[0]*np.tan(5*np.pi/180):
-            print(f"Walker Fell off the platform at {self.data.qpos[0]} meter!!")
-            terminated = False
+            #print(f"Walker Fell off the platform at {self.data.qpos[0]} meter!!")
+            terminated = True
+            step_nb = 0
         if np.abs(self.data.qpos[0] - self.previous_state[0])<1e-4:
             self.stuck += 1
             if self.stuck > 10/self.dt:
                 print(f"Walker not moving for 10 seconds!!")
-                terminated = True
+                terminated = False
         else:
             self.stuck = 0
 
