@@ -1,5 +1,5 @@
 from os import path
-from typing import Dict, Union, List
+from typing import Dict, Union
 
 import numpy as np
 from gymnasium import utils
@@ -13,6 +13,8 @@ DEFAULT_CAMERA_CONFIG = {
 
 
 class AntCustomEnv(MujocoEnv, utils.EzPickle):
+    r"""In this environment a Passive Dynamic Walker is tasked to locomote.
+    """
 
     metadata = {
         "render_modes": [
@@ -30,7 +32,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         forward_reward_weight: float = 1,
         ctrl_cost_weight: float = 0.5,
         cfrc_cost_weight: float = 5e-4,
-        main_bodies: Union[int, List[int]] = [1, 2],  # multiple main bodies
+        main_body: Union[int, str] = 1,
         reset_noise_scale: float = 0.1,
         exclude_current_positions_from_observation: bool = True,
         include_cfrc_ext_in_observation: bool = False,
@@ -42,12 +44,6 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             robot_path,
         )
 
-        # Ensure main_bodies is always a list
-        if isinstance(main_bodies, int):
-            self._main_bodies = [main_bodies]
-        else:
-            self._main_bodies = main_bodies
-
         utils.EzPickle.__init__(
             self,
             xml_file_path,
@@ -56,7 +52,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             forward_reward_weight,
             ctrl_cost_weight,
             cfrc_cost_weight,
-            self._main_bodies,
+            main_body,
             reset_noise_scale,
             exclude_current_positions_from_observation,
             pert_force,
@@ -65,6 +61,8 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         self._forward_reward_weight = forward_reward_weight
         self._ctrl_cost_weight = ctrl_cost_weight
         self._cfrc_cost_weight = cfrc_cost_weight
+
+        self._main_body = main_body
 
         self._reset_noise_scale = reset_noise_scale
 
@@ -76,7 +74,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             self,
             xml_file_path,
             frame_skip,
-            observation_space=None,
+            observation_space=None,  # needs to be defined after
             default_camera_config=default_camera_config,
             width=832,
             height=496,
@@ -114,57 +112,47 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         self.previous_state = None
         self.stuck = 0
         if pert_force is not None:
-            self.body_ids, self.force = pert_force
+            self.body_ids , self.force = pert_force
+
 
     def step(self, action):
-        forward_rewards = 0.0
-        xy_positions_before = []
-        xy_positions_after = []
-
-        for body_id in self._main_bodies:
-            pos_before = self.data.body(body_id).xpos[:2].copy()
-            xy_positions_before.append(pos_before)
-
+        xy_position_before = self.data.body(self._main_body).xpos[:2].copy()
         if self.body_ids is not None:
             self.apply_force()
-
         self.do_simulation(action, self.frame_skip)
+        xy_position_after = self.data.body(self._main_body).xpos[:2].copy()
 
-        for body_id in self._main_bodies:
-            pos_after = self.data.body(body_id).xpos[:2].copy()
-            xy_positions_after.append(pos_after)
-            print(f"Ant {body_id} position: {pos_after}")
+        xy_velocity = (xy_position_after - xy_position_before) / self.dt
+        x_velocity, y_velocity = xy_velocity
 
-        velocities = []
-        for before, after in zip(xy_positions_before, xy_positions_after):
-            vel = (after - before) / self.dt
-            velocities.append(vel)
-            forward_rewards += vel[0]  # x-velocity
-           
-        forward_reward = (forward_rewards / len(self._main_bodies)) * self._forward_reward_weight
+        forward_reward = x_velocity * self._forward_reward_weight
+        healthy_reward = 1
+        ctrl_cost = np.linalg.norm(action)**2 * self._ctrl_cost_weight
+        cfrc_cost = np.linalg.norm( self.data.cfrc_ext[1:])**2 * self._cfrc_cost_weight
 
-        healthy_reward = 1.0
-        ctrl_cost = np.linalg.norm(action) ** 2 * self._ctrl_cost_weight
-        cfrc_cost = np.linalg.norm(self.data.cfrc_ext[1:]) ** 2 * self._cfrc_cost_weight
-
-        reward = healthy_reward + forward_reward - ctrl_cost - cfrc_cost
+        #TODO
+        reward = healthy_reward + forward_reward -ctrl_cost -cfrc_cost
         observation = self._get_obs()
+        print("#observation in gym step : ", observation)
 
         info = {
             "reward_forward": forward_reward,
             "healthy_reward": healthy_reward,
             "ctrl_cost": ctrl_cost,
             "cfrc_cost": cfrc_cost,
+            "x_position": self.data.qpos[0],
+            "y_position": self.data.qpos[1],
             "distance_from_origin": np.linalg.norm(self.data.qpos[0:2], ord=2),
+            "x_velocity": x_velocity,
+            "y_velocity": y_velocity,
         }
-
         terminated = False
+        # Check for NaN, Inf, or huge values
         qacc = self.data.qacc
         if np.any(np.isnan(qacc)) or np.any(np.isinf(qacc)) or np.any(np.abs(qacc) > 1e6):
             DOF = np.argwhere((np.isnan(qacc)) + (np.isinf(qacc)) + (np.abs(qacc) > 1e6)).squeeze()[0]
             print(ValueError(f'MuJoCo Warning: Nan, Inf or huge value in QACC at DOF {DOF}'))
             terminated = True
-        # Termination based on first ant's torso height 
         if self.data.qpos[2] < 0.2 or self.data.qpos[2] > 1.0:
             terminated = True
         if np.isinf(observation).any():
@@ -185,14 +173,16 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
 
         return np.concatenate((position, velocity))
 
+
     def apply_force(self):
-        # Apply force to all bodies in self.body_ids
-        for body_id in self.body_ids:
-            force = self.force
-            pert = self.np_random.uniform(low=-0.1, high=0.1, size=3)
-            rot = quat2rot([1, *pert])
-            force = np.dot(rot, force.reshape(2, 3).T).T.flatten()
-            self.data.xfrc_applied[body_id] = force
+        body_id = self.body_ids
+        force = self.force
+        pert = self.np_random.uniform(
+            low=-0.1, high=0.1, size=3)
+        rot = quat2rot([1, *pert])
+        force = np.dot(rot, force.reshape(2, 3).T).T.flatten()
+        self.data.xfrc_applied[body_id] = force
+
 
     def reset_model(self):
         noise_low = -self._reset_noise_scale
@@ -208,8 +198,8 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         )
         self.set_state(qpos, qvel)
         observation = self._get_obs()
-        # print("#observation in gym reset : ", observation)
-        # print("#observation shape in gym reset : ", observation.shape)
+        print("#observation in gym reset : ", observation)
+        print("#observation shape in gym reset : ", observation.shape)
         return observation
 
     def _get_reset_info(self):
