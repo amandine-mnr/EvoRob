@@ -113,17 +113,22 @@ class AntWorld(World):
         return points, connectivity_mat
 
     def evaluate_individual(self, genotype):
-        points, connectivity_mat = self.geno2pheno(genotype)
+        # points, connectivity_mat = self.geno2pheno(genotype)
 
-        robot = AntRobot(points, connectivity_mat, self.joint_limits, self.joint_axis, verbose=False)
-        robot.xml = robot.define_robot()
-        robot.write_xml()
+        # robot = AntRobot(points, connectivity_mat, self.joint_limits, self.joint_axis, verbose=False)
+        # robot.xml = robot.define_robot()
+        # robot.write_xml(f"AntRobot.xml")
+        # robot = AntRobot(points, connectivity_mat, self.joint_limits, self.joint_axis, verbose=False)
+        # robot.xml = robot.define_robot()
+        # robot.write_xml(f"AntRobot2.xml")
+
 
         # % Defining the Robot environment in MuJoCo
         world = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', "ant_world.xml"))
         robot_env = world.getroot()
 
         robot_env.append(xml.Element("include", attrib={"file": "AntRobot.xml"}))
+        robot_env.append(xml.Element("include", attrib={"file": "AntRobot2.xml"}))
         world_xml = xml.tostring(robot_env, encoding='unicode')
 
         with open(self.world_file, "w") as f:
@@ -213,15 +218,16 @@ def generate_best_individual_video(world, video_name: str = 'EvoRob3_video.mp4')
 def visualise_individual(genotype):
     world = AntWorld()
     points, connectivity_mat = world.geno2pheno(genotype)
-    robot = AntRobot(points, connectivity_mat, world.joint_limits, world.joint_axis, verbose=False)
-    robot.xml = robot.define_robot()
-    robot.write_xml()
+    # robot = AntRobot(points, connectivity_mat, world.joint_limits, world.joint_axis, verbose=False)
+    # robot.xml = robot.define_robot()
+    # robot.write_xml()
 
     # % Defining the Robot environment in MuJoCo
     world_xml = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', "ant_world.xml"))
     robot_env = world_xml.getroot()
 
     robot_env.append(xml.Element("include", attrib={"file": "AntRobot.xml"}))
+    robot_env.append(xml.Element("include", attrib={"file": "AntRobot2.xml"}))
     world_xml = xml.tostring(robot_env, encoding='unicode')
     with open(world.world_file, "w") as f:
         f.write(world_xml)
@@ -272,7 +278,7 @@ def main():
     NSGA_opts["min"] = -1
     NSGA_opts["max"] = 1
     NSGA_opts["num_parents"] = population_size
-    NSGA_opts["num_generations"] = 100
+    NSGA_opts["num_generations"] = 1 #100
     NSGA_opts["mutation_prob"] = 0.3
     NSGA_opts["crossover_prob"] = 0.5
 
@@ -283,18 +289,19 @@ def main():
 
     # %% visualise
     # TODO: Make a video of the best individual, and plot the fitness curve.
-    best_individual = np.load(os.path.join(results_dir, "99", "x_best.npy"))
+    # best_individual = np.load(os.path.join(results_dir, "99", "x_best.npy"))
 
-    points, connectivity_mat = world.geno2pheno(best_individual)
-    robot = AntRobot(points, connectivity_mat, world.joint_limits, world.joint_axis, verbose=False)
-    robot.xml = robot.define_robot()
-    robot.write_xml()
+    # points, connectivity_mat = world.geno2pheno(best_individual)
+    # robot = AntRobot(points, connectivity_mat, world.joint_limits, world.joint_axis, verbose=False)
+    # robot.xml = robot.define_robot()
+    # robot.write_xml()
 
     # % Defining the Robot environment in MuJoCo
     world_xml = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', "ant_world.xml"))
     robot_env = world_xml.getroot()
 
     robot_env.append(xml.Element("include", attrib={"file": "AntRobot.xml"}))
+    robot_env.append(xml.Element("include", attrib={"file": "AntRobot2.xml"}))
     world_xml = xml.tostring(robot_env, encoding='unicode')
     with open(world.world_file, "w") as f:
         f.write(world_xml)
