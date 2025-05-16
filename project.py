@@ -111,7 +111,7 @@ def run_EA_single(ea_single, world):
 
     return best_individual, best_fitness
 
-def generate_best_individual_video(world, best_individual, video_name: str = 'EvoRob3_video.mp4'):
+def generate_best_individual_video(world, best_individual, video_name: str = 'EvoRob3_video2.mp4'):
     world.controller.geno2pheno(best_individual)
     env = gym.make(ENV_NAME,
                    robot_path=world.world_file,
@@ -175,11 +175,11 @@ def main():
     world = AntWorld()
     n_parameters = world.n_params
 
-    population_size = 250
+    population_size = 4 #250
     CMAES_opts["min"] = -1
     CMAES_opts["max"] = 1
-    CMAES_opts["num_parents"] = 100
-    CMAES_opts["num_generations"] = 20
+    # CMAES_opts["num_parents"] = 100
+    CMAES_opts["num_generations"] = 10
     CMAES_opts["mutation_sigma"] = 0.33
 
     results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'single')
