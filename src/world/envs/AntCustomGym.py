@@ -133,7 +133,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         for body_id in self._main_bodies:
             pos_after = self.data.body(body_id).xpos[:2].copy()
             xy_positions_after.append(pos_after)
-            print(f"Ant {body_id} position: {pos_after}")
+            # print(f"Ant {body_id} position: {pos_after}")
 
         velocities = []
         for before, after in zip(xy_positions_before, xy_positions_after):
@@ -160,13 +160,23 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
 
         terminated = False
         qacc = self.data.qacc
+
+        nq = self.model.nq
+        half = nq // 2 #15
+        #print("half : ", half)
         if np.any(np.isnan(qacc)) or np.any(np.isinf(qacc)) or np.any(np.abs(qacc) > 1e6):
             DOF = np.argwhere((np.isnan(qacc)) + (np.isinf(qacc)) + (np.abs(qacc) > 1e6)).squeeze()[0]
             print(ValueError(f'MuJoCo Warning: Nan, Inf or huge value in QACC at DOF {DOF}'))
             terminated = True
-        # Termination based on first ant's torso height 
-        if self.data.qpos[2] < 0.2 or self.data.qpos[2] > 1.0:
+        # # Termination based on first ant's torso height 
+        # if self.data.qpos[2] < 0.2 or self.data.qpos[2] > 1.0:
+        #     terminated = True
+        ant1_height = self.data.qpos[2]
+        ant2_height = self.data.qpos[2 + half]  # Find actual offset depending on your robot DOFs
+
+        if ant1_height < 0.2 or ant1_height > 1.0 or ant2_height < 0.2 or ant2_height > 1.0:
             terminated = True
+
         if np.isinf(observation).any():
             terminated = True
 

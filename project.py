@@ -84,14 +84,35 @@ class AntWorld(World):
 #             fit_ind, _ = world.evaluate_individual(genotype)
 #             fitnesses_gen[index] = fit_ind
 #         ea_single.tell(pop, fitnesses_gen)
+
+# def run_EA_single(ea_single, world):
+#     for gen in range(ea_single.n_gen):
+#         pop = ea_single.ask()
+#         fitnesses_gen = np.array([world.evaluate_individual(ind) for ind in pop])
+#         ea_single.tell(pop, fitnesses_gen)
+
 def run_EA_single(ea_single, world):
+    best_individual = None
+    best_fitness = -np.inf
+
     for gen in range(ea_single.n_gen):
+        print("generation ", gen)
         pop = ea_single.ask()
         fitnesses_gen = np.array([world.evaluate_individual(ind) for ind in pop])
+        
+        # Update the best individual and its fitness
+        max_fitness_idx = np.argmax(fitnesses_gen)
+        if fitnesses_gen[max_fitness_idx] > best_fitness:
+            best_fitness = fitnesses_gen[max_fitness_idx]
+            best_individual = pop[max_fitness_idx]
+        ####################################################
+
         ea_single.tell(pop, fitnesses_gen)
 
+    return best_individual, best_fitness
 
-def generate_best_individual_video(world, video_name: str = 'EvoRob3_video.mp4'):
+def generate_best_individual_video(world, best_individual, video_name: str = 'EvoRob3_video.mp4'):
+    world.controller.geno2pheno(best_individual)
     env = gym.make(ENV_NAME,
                    robot_path=world.world_file,
                    render_mode="rgb_array")
@@ -106,7 +127,8 @@ def generate_best_individual_video(world, video_name: str = 'EvoRob3_video.mp4')
         rewards_list.append(rewards)
         if terminated:
             break
-    print(np.sum(rewards_list))
+
+    print(f"Total reward of the best individual: {np.sum(rewards_list)}")
 
     import imageio
     imageio.mimsave(video_name, frames, fps=30)  # Set frames per second (fps)
@@ -134,18 +156,19 @@ def visualise_individual(genotype):
     rewards_list = []
 
     observations, info = env.reset()
-    for step in range(1000):
+    for step in range(2000):
         action = world.controller.get_action(observations)
         observations, rewards, terminated, truncated, info = env.step(action)
         rewards_list.append(rewards)
         if terminated:
+            print("termination")
             break
     env.close()
     print(np.sum(rewards_list))
 
 def main():
     # %% Understanding the world
-    genotype = np.random.uniform(-1, 1, 953)  # 8 body parameters, 945 NN weights
+    genotype = np.random.uniform(-1, 1, (56*56+56*16))  # 8 body parameters, 945 NN weights
     visualise_individual(genotype)
 
     # %% Optimise single-objective
@@ -156,13 +179,14 @@ def main():
     CMAES_opts["min"] = -1
     CMAES_opts["max"] = 1
     CMAES_opts["num_parents"] = 100
-    CMAES_opts["num_generations"] = 100
+    CMAES_opts["num_generations"] = 20
     CMAES_opts["mutation_sigma"] = 0.33
 
     results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'single')
     ea_single = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
 
-    run_EA_single(ea_single, world)
+    best_individual, best_fitness = run_EA_single(ea_single, world)
+    print(f"Best fitness achieved: {best_fitness}")
 
     # %% visualise
     # TODO: Make a video of the best individual, and plot the fitness curve.
@@ -173,17 +197,17 @@ def main():
     # robot.xml = robot.define_robot()
     # robot.write_xml()
 
-    # % Defining the Robot environment in MuJoCo
-    world_xml = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', "ant_world.xml"))
-    robot_env = world_xml.getroot()
+    # # % Defining the Robot environment in MuJoCo
+    # world_xml = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', "ant_world.xml"))
+    # robot_env = world_xml.getroot()
 
-    robot_env.append(xml.Element("include", attrib={"file": "AntRobot.xml"}))
-    robot_env.append(xml.Element("include", attrib={"file": "AntRobot2.xml"}))
-    world_xml = xml.tostring(robot_env, encoding='unicode')
-    with open(world.world_file, "w") as f:
-        f.write(world_xml)
+    # robot_env.append(xml.Element("include", attrib={"file": "AntRobot.xml"}))
+    # robot_env.append(xml.Element("include", attrib={"file": "AntRobot2.xml"}))
+    # world_xml = xml.tostring(robot_env, encoding='unicode')
+    # with open(world.world_file, "w") as f:
+    #     f.write(world_xml)
 
-    generate_best_individual_video(world)
+    generate_best_individual_video(world, best_individual)
 
 
 if __name__ == "__main__":

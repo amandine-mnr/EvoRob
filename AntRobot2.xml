@@ -5,7 +5,7 @@
         <geom condim="3" conaffinity="0" density="5.0" friction="1 0.5 0.5" margin="0.01" rgba="0.8 0.6 0.4 1"/>
     </default>
     <worldbody>
-        <body name="Base_2" pos="0.0 0.0 0.75">
+        <body name="Base_2" pos="2.0 2.0 0.75">
             <joint type="free" armature="0" damping="0" limited="false" margin="0.01" pos="0 0 0"/>
             <geom type="sphere" rgba="0.8 0.6 0.4 1" size="0.25"/>
             <camera name="track_2" mode="trackcom" pos="0 -3 0.3" xyaxes="1 0 0 0 0 1"/>
