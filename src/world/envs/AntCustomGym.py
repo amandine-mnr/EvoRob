@@ -129,11 +129,15 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             forward_rewards += vel[0]  # x-velocity
 
         forward_reward = (forward_rewards / len(self.body_ids)) * self._forward_reward_weight
+
+        distance = np.linalg.norm(xy_positions_after[0] - xy_positions_after[1])
+        cohesion_penalty = 0.1 * distance  # Penalize separation
+
         healthy_reward = 1.0
         ctrl_cost = np.linalg.norm(action) ** 2 * self._ctrl_cost_weight
         cfrc_cost = np.linalg.norm(self.data.cfrc_ext[1:]) ** 2 * self._cfrc_cost_weight
 
-        reward = healthy_reward + forward_reward - ctrl_cost - cfrc_cost
+        reward = healthy_reward + forward_reward - ctrl_cost - cfrc_cost - cohesion_penalty
         observation = self._get_obs()
 
         info = {
@@ -163,7 +167,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
 
         if self.render_mode == "human":
             self.render()
-            
+
         return observation, reward, terminated, False, info
 
     def _get_obs(self):
@@ -174,6 +178,13 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             position = position[2:]
 
         return np.concatenate((position, velocity))
+
+    # def _get_obs(self):
+    #     ant1_pos = self.data.qpos[:15]  # First ant's 15-DOF position
+    #     ant2_pos = self.data.qpos[15:]  # Second ant's position
+    #     ant1_vel = self.data.qvel[:14]  # First ant's velocity
+    #     ant2_vel = self.data.qvel[14:]  # Second ant's velocity
+    #     return np.concatenate([ant1_pos, ant2_pos, ant1_vel, ant2_vel])
 
     def apply_force(self):
         for body_id in self.body_ids:
