@@ -137,7 +137,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         ctrl_cost = np.linalg.norm(action) ** 2 * self._ctrl_cost_weight
         cfrc_cost = np.linalg.norm(self.data.cfrc_ext[1:]) ** 2 * self._cfrc_cost_weight
 
-        reward = healthy_reward + forward_reward - ctrl_cost - cfrc_cost - cohesion_penalty
+        reward = healthy_reward + 3.0*forward_reward - ctrl_cost - cfrc_cost - 3.0*cohesion_penalty
         observation = self._get_obs()
 
         info = {
