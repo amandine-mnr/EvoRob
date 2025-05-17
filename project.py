@@ -227,9 +227,9 @@ def run_EA_multi(ea_multi, world):
         # Update Pareto front
         for idx, ind in enumerate(ea_multi.x):
             # Add only non-duplicate, non-dominated solutions
-            if ind not in pareto_front:
-                pareto_front.append(ind)
-                pareto_fitnesses.append(fitnesses_gen[idx])
+            
+            pareto_front.append(ind)
+            pareto_fitnesses.append(fitnesses_gen[idx])
 
     return pareto_front, pareto_fitnesses
 
@@ -252,11 +252,11 @@ def main():
     # best_individual, best_fitness = run_EA_single(ea_single, world)
     # print(f"Best fitness achieved: {best_fitness}")
     # generate_best_individual_video(world, best_individual)
-    population_size = 250
+    population_size = 20
     NSGA_opts["min"] = -1
     NSGA_opts["max"] = 1
     NSGA_opts["num_parents"] = population_size
-    NSGA_opts["num_generations"] = 100
+    NSGA_opts["num_generations"] = 20
     NSGA_opts["mutation_prob"] = 0.3
     NSGA_opts["crossover_prob"] = 0.5
 
@@ -265,7 +265,7 @@ def main():
 
     pareto_front, pareto_fitnesses = run_EA_multi(ea_multi_obj, world)
     world.visualize_pareto_front(pareto_front, pareto_fitnesses)
-    best_individual = np.load(os.path.join(results_dir, "99", "x_best.npy"))
+    best_individual = np.load(os.path.join(results_dir, "19", "x_best.npy"))
     generate_best_individual_video(world, best_individual)
 
     print("Multi-objective optimization and video generation complete.")
