@@ -25,21 +25,19 @@ class AntWorld(World):
         self.n_weights = self.controller.n_params
         self.n_params = self.n_weights
         self.world_file = os.path.join(ROOT_DIR, 'AntEnv.xml')
-    
+
+        # Prepare the XML only once during initialization
+        world = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', 'ant_world.xml'))
+        robot_env = world.getroot()
+        robot_env.append(xml.Element('include', attrib={'file': 'AntRobot.xml'}))
+        robot_env.append(xml.Element('include', attrib={'file': 'AntRobot2.xml'}))
+        world_xml = xml.tostring(robot_env, encoding='unicode')
+        with open(self.world_file, 'w') as f:
+            f.write(world_xml)
+
     def evaluate_individual(self, genotype):
         # Load the NN weights
         self.controller.geno2pheno(genotype)
-
-        # Define the environment including both robots
-        world = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', 'ant_world.xml'))
-        robot_env = world.getroot()
-
-        robot_env.append(xml.Element('include', attrib={'file': 'AntRobot.xml'}))
-        robot_env.append(xml.Element('include', attrib={'file': 'AntRobot2.xml'}))
-        world_xml = xml.tostring(robot_env, encoding='unicode') #write the final world file
-
-        with open(self.world_file, 'w') as f:
-            f.write(world_xml)
 
         envs = AsyncVectorEnv(
             [
@@ -61,34 +59,20 @@ class AntWorld(World):
         for step in range(self.n_steps):
             actions = np.where(done_mask[:, None], 0, self.controller.get_action(observations.T).T)
             observations, rewards, dones, truncated, infos = envs.step(actions)
-            
-            # Store rewards for active environments only
+
             rewards_full[step, done_mask == False] = rewards[done_mask == False]
-            # Update the done mask based on the "done" and "truncated" flags
             done_mask = done_mask | dones | truncated
 
-            # Optionally, break if all environments have terminated
             if np.all(done_mask):
                 break
 
         final_rewards = np.sum(rewards_full, axis=0)
         envs.close()
         return np.mean(final_rewards)
-    
+
     def evaluate_individual_multi(self, genotype):
         # Load the NN weights
         self.controller.geno2pheno(genotype)
-
-        # Define the environment including both robots
-        world = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', 'ant_world.xml'))
-        robot_env = world.getroot()
-
-        robot_env.append(xml.Element('include', attrib={'file': 'AntRobot.xml'}))
-        robot_env.append(xml.Element('include', attrib={'file': 'AntRobot2.xml'}))
-        world_xml = xml.tostring(robot_env, encoding='unicode') #write the final world file
-
-        with open(self.world_file, 'w') as f:
-            f.write(world_xml)
 
         envs = AsyncVectorEnv(
             [
@@ -112,6 +96,7 @@ class AntWorld(World):
             actions = np.where(done_mask[:, None], 0, self.controller.get_action(observations.T).T)
             observations, rewards, dones, truncated, infos = envs.step(actions)
             rewards_full[step, done_mask == False] = rewards[done_mask == False]
+
             multi_obj_reward = np.array([infos['reward_forward'], -infos['separation']]).T  
             multi_obj_rewards_full[step, done_mask == False] = multi_obj_reward[done_mask == False]
 
@@ -123,7 +108,6 @@ class AntWorld(World):
         final_multi_obj_rewards = np.sum(multi_obj_rewards_full, axis=0)
         envs.close()
         return np.mean(final_rewards), np.mean(final_multi_obj_rewards, axis=0)
-        # return np.array([np.mean(final_rewards), mean_multi_obj[0], mean_multi_obj[1]])
 
     def visualize_pareto_front(self, pareto_front, fitnesses, output_file='pareto_front2.png'):
         plt.figure()
@@ -133,7 +117,6 @@ class AntWorld(World):
         plt.xlabel('Separation (lower is better)')
         plt.ylabel('Distance (higher is better)')
         plt.title('Pareto Front: Distance vs Separation')
-        # plt.gca().invert_xaxis()  # Optional: flip x-axis to emphasize "lower is better"
         plt.grid(True)
         plt.savefig(output_file)
         plt.close()
@@ -147,13 +130,11 @@ def run_EA_single(ea_single, world):
         print("generation ", gen)
         pop = ea_single.ask()
         fitnesses_gen = np.array([world.evaluate_individual(ind) for ind in pop])
-        
-        # Update the best individual and its fitness
+
         max_fitness_idx = np.argmax(fitnesses_gen)
         if fitnesses_gen[max_fitness_idx] > best_fitness:
             best_fitness = fitnesses_gen[max_fitness_idx]
             best_individual = pop[max_fitness_idx]
-        ####################################################
 
         ea_single.tell(pop, fitnesses_gen)
 
@@ -179,24 +160,11 @@ def generate_best_individual_video(world, best_individual, video_name: str = 'Ev
     print(f"Total reward of the best individual: {np.sum(rewards_list)}")
 
     import imageio
-    imageio.mimsave(video_name, frames, fps=30)  # Set frames per second (fps)
+    imageio.mimsave(video_name, frames, fps=30)
     env.close()
-    
+
 def visualise_individual(genotype):
     world = AntWorld()
-    # robot = AntRobot(points, connectivity_mat, world.joint_limits, world.joint_axis, verbose=False)
-    # robot.xml = robot.define_robot()
-    # robot.write_xml()
-
-    # % Defining the Robot environment in MuJoCo
-    world_xml = xml.parse(os.path.join(ROOT_DIR, 'src', 'world', 'robot', 'assets', "ant_world.xml"))
-    robot_env = world_xml.getroot()
-
-    robot_env.append(xml.Element("include", attrib={"file": "AntRobot.xml"}))
-    robot_env.append(xml.Element("include", attrib={"file": "AntRobot2.xml"}))
-    world_xml = xml.tostring(robot_env, encoding='unicode')
-    with open(world.world_file, "w") as f:
-        f.write(world_xml)
 
     env = gym.make(ENV_NAME,
                    robot_path=world.world_file,
@@ -213,16 +181,6 @@ def visualise_individual(genotype):
             break
     env.close()
     print(np.sum(rewards_list))
-    ######################
-
-# def run_EA_multi(ea_multi, world):
-#     for gen in range(ea_multi.n_gen):
-#         pop = ea_multi.ask()
-#         fitnesses_gen = np.empty((len(pop), 2))
-#         for index, genotype in enumerate(pop):
-#             _, fit_ind = world.evaluate_individual(genotype)
-#             fitnesses_gen[index] = fit_ind
-#         ea_multi.tell(pop, fitnesses_gen)
 
 def run_EA_multi(ea_multi, world):
     pareto_front = []
@@ -231,13 +189,11 @@ def run_EA_multi(ea_multi, world):
     for gen in range(ea_multi.n_gen):
         print(f"Generation {gen}")
         pop = ea_multi.ask()
-        # fitnesses_gen = np.array([world.evaluate_individual_multi(ind) for ind in pop])
         fitnesses_gen = np.empty((len(pop), 2))
         for index, genotype in enumerate(pop):
             _, fit_ind = world.evaluate_individual_multi(genotype)
             fitnesses_gen[index] = fit_ind
 
-        # Update NSGA-II with the new population and fitness values
         ea_multi.tell(pop, fitnesses_gen)
 
         # Update Pareto front
@@ -246,7 +202,6 @@ def run_EA_multi(ea_multi, world):
             pareto_fitnesses.append(fitnesses_gen[idx])
 
     return pareto_front, pareto_fitnesses
-
 
 def main():
     world = AntWorld()
@@ -266,6 +221,7 @@ def main():
     # best_individual, best_fitness = run_EA_single(ea_single, world)
     # print(f"Best fitness achieved: {best_fitness}")
     # generate_best_individual_video(world, best_individual)
+    
     population_size = 20
     NSGA_opts["min"] = -1
     NSGA_opts["max"] = 1
@@ -283,7 +239,6 @@ def main():
     generate_best_individual_video(world, best_individual)
 
     print("Multi-objective optimization and video generation complete.")
-
 
 if __name__ == "__main__":
     main()
