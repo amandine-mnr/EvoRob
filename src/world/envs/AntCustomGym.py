@@ -154,8 +154,8 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         if np.any(np.isnan(qacc)) or np.any(np.isinf(qacc)) or np.any(np.abs(qacc) > 1e6):
             terminated = True
 
-        ant1_height = self.data.qpos[2]
-        ant2_height = self.data.qpos[2 + 15]
+        ant1_height = self.data.xpos[self.body_ids[0]][2]
+        ant2_height = self.data.xpos[self.body_ids[1]][2]
 
         if ant1_height < 0.2 or ant1_height > 1.0 or ant2_height < 0.2 or ant2_height > 1.0:
             terminated = True
