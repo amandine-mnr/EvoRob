@@ -131,13 +131,13 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         forward_reward = (forward_rewards / len(self.body_ids)) * self._forward_reward_weight
 
         distance = np.linalg.norm(xy_positions_after[0] - xy_positions_after[1])
-        cohesion_penalty = 0.1 * distance  # Penalize separation
+        separation_penalty = 1.0 * distance  
 
         healthy_reward = 1.0
         ctrl_cost = np.linalg.norm(action) ** 2 * self._ctrl_cost_weight
         cfrc_cost = np.linalg.norm(self.data.cfrc_ext[1:]) ** 2 * self._cfrc_cost_weight
 
-        reward = healthy_reward + 3.0*forward_reward - ctrl_cost - cfrc_cost - 3.0*cohesion_penalty
+        reward = healthy_reward + 3.0*forward_reward - ctrl_cost - cfrc_cost - separation_penalty
         observation = self._get_obs()
 
         info = {
@@ -146,6 +146,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             "ctrl_cost": ctrl_cost,
             "cfrc_cost": cfrc_cost,
             "distance_from_origin": np.linalg.norm(self.data.qpos[0:2], ord=2),
+            "separation" : separation_penalty,
         }
 
         terminated = False

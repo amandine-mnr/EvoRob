@@ -103,6 +103,7 @@ class AntWorld(World):
         )
 
         rewards_full = np.zeros((self.n_steps, self.n_repeats))
+        multi_obj_rewards_full = np.zeros((self.n_steps, self.n_repeats, 2))  
 
         observations, info = envs.reset()
         done_mask = np.zeros(self.n_repeats, dtype=bool)
@@ -111,27 +112,29 @@ class AntWorld(World):
             actions = np.where(done_mask[:, None], 0, self.controller.get_action(observations.T).T)
             observations, rewards, dones, truncated, infos = envs.step(actions)
             rewards_full[step, done_mask == False] = rewards[done_mask == False]
+            multi_obj_reward = np.array([infos['reward_forward'], -infos['separation']]).T  
+            multi_obj_rewards_full[step, done_mask == False] = multi_obj_reward[done_mask == False]
+
             done_mask = done_mask | dones | truncated
             if np.all(done_mask):
                 break
 
+        final_rewards = np.sum(rewards_full, axis=0)
+        final_multi_obj_rewards = np.sum(multi_obj_rewards_full, axis=0)
         envs.close()
+        return np.mean(final_rewards), np.mean(final_multi_obj_rewards, axis=0)
+        # return np.array([np.mean(final_rewards), mean_multi_obj[0], mean_multi_obj[1]])
 
-        total_rewards = np.sum(rewards_full, axis=0)
-        mean_reward = np.mean(total_rewards)
-        std_reward = np.std(total_rewards)
-
-        return mean_reward, -std_reward  # Objective 1: Maximize reward, Objective 2: Minimize variability
-
-
-    def visualize_pareto_front(self, pareto_front, fitnesses, output_file='pareto_front.png'):
+    def visualize_pareto_front(self, pareto_front, fitnesses, output_file='pareto_front2.png'):
         plt.figure()
-        rewards = [fit[0] for fit in fitnesses]
-        variabilities = [-fit[1] for fit in fitnesses]
-        plt.scatter(variabilities, rewards, color='blue')
-        plt.xlabel('Variability (lower is better)')
-        plt.ylabel('Mean Reward (higher is better)')
-        plt.title('Pareto Front')
+        distances = [fit[0] for fit in fitnesses]  
+        separations = [fit[1] for fit in fitnesses]  
+        plt.scatter(separations, distances, color='blue')
+        plt.xlabel('Separation (lower is better)')
+        plt.ylabel('Distance (higher is better)')
+        plt.title('Pareto Front: Distance vs Separation')
+        # plt.gca().invert_xaxis()  # Optional: flip x-axis to emphasize "lower is better"
+        plt.grid(True)
         plt.savefig(output_file)
         plt.close()
 
@@ -212,6 +215,15 @@ def visualise_individual(genotype):
     print(np.sum(rewards_list))
     ######################
 
+# def run_EA_multi(ea_multi, world):
+#     for gen in range(ea_multi.n_gen):
+#         pop = ea_multi.ask()
+#         fitnesses_gen = np.empty((len(pop), 2))
+#         for index, genotype in enumerate(pop):
+#             _, fit_ind = world.evaluate_individual(genotype)
+#             fitnesses_gen[index] = fit_ind
+#         ea_multi.tell(pop, fitnesses_gen)
+
 def run_EA_multi(ea_multi, world):
     pareto_front = []
     pareto_fitnesses = []
@@ -219,15 +231,17 @@ def run_EA_multi(ea_multi, world):
     for gen in range(ea_multi.n_gen):
         print(f"Generation {gen}")
         pop = ea_multi.ask()
-        fitnesses_gen = np.array([world.evaluate_individual_multi(ind) for ind in pop])
+        # fitnesses_gen = np.array([world.evaluate_individual_multi(ind) for ind in pop])
+        fitnesses_gen = np.empty((len(pop), 2))
+        for index, genotype in enumerate(pop):
+            _, fit_ind = world.evaluate_individual_multi(genotype)
+            fitnesses_gen[index] = fit_ind
 
         # Update NSGA-II with the new population and fitness values
         ea_multi.tell(pop, fitnesses_gen)
 
         # Update Pareto front
-        for idx, ind in enumerate(ea_multi.x):
-            # Add only non-duplicate, non-dominated solutions
-            
+        for idx, ind in enumerate(ea_multi.x):            
             pareto_front.append(ind)
             pareto_fitnesses.append(fitnesses_gen[idx])
 
