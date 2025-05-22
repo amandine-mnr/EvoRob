@@ -97,7 +97,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             - 2 * exclude_current_positions_from_observation,
             "qvel": self.data.qvel.size,
         }
-        self.body_ids = [1, 2]  # Fixed body IDs
+        self.body_ids = [1, 18]  # Fixed body IDs
         self.force = None
         self.previous_state = None
         self.stuck = 0
@@ -112,6 +112,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         for body_id in self.body_ids:
             pos_before = self.data.xpos[body_id][:2].copy()
             xy_positions_before.append(pos_before)
+            # print("pos before : ",xy_positions_before )
 
         if self.force is not None:
             self.apply_force()
@@ -121,6 +122,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         for body_id in self.body_ids:
             pos_after = self.data.xpos[body_id][:2].copy()
             xy_positions_after.append(pos_after)
+            # print("pos after : ",xy_positions_after)
 
         velocities = []
         for before, after in zip(xy_positions_before, xy_positions_after):
@@ -158,8 +160,9 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         ant1_height = self.data.xpos[self.body_ids[0]][2]
         ant2_height = self.data.xpos[self.body_ids[1]][2]
 
-        if ant1_height < 0.2 or ant1_height > 1.0 or ant2_height < 0.2 or ant2_height > 1.0:
+        if ((ant1_height < 0.2) or (ant1_height > 1.0) or (ant2_height < 0.2) or (ant2_height > 1.0)):
             terminated = True
+            #look at rotation of the core, look if it's standing still
 
         if np.isinf(observation).any():
             terminated = True
