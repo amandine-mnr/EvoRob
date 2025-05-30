@@ -19,7 +19,7 @@ class AntWorld(World):
         action_space = 16  # 8 actions per robot
         state_space = 56  # 28 observations per robot
 
-        self.n_repeats = 3
+        self.n_repeats = 3 #3
         self.n_steps = 1000
         self.controller = MLP.NNController(state_space, action_space)
         self.n_weights = self.controller.n_params
@@ -58,6 +58,7 @@ class AntWorld(World):
         for step in range(self.n_steps):
             actions = np.where(done_mask[:, None], 0, self.controller.get_action(observations.T).T)
             observations, rewards, dones, truncated, infos = envs.step(actions)
+            # print("observation : ", observations.shape)
 
             rewards_full[step, done_mask == False] = rewards[done_mask == False]
             done_mask = done_mask | dones | truncated
@@ -96,7 +97,7 @@ class AntWorld(World):
             observations, rewards, dones, truncated, infos = envs.step(actions)
             rewards_full[step, done_mask == False] = rewards[done_mask == False]
 
-            multi_obj_reward = np.array([infos['reward_forward'], -infos['separation']]).T  
+            multi_obj_reward = np.array([infos['vel_x'], -infos['inter_distance']]).T  
             multi_obj_rewards_full[step, done_mask == False] = multi_obj_reward[done_mask == False]
 
             done_mask = done_mask | dones | truncated
@@ -113,9 +114,9 @@ class AntWorld(World):
         distances = [fit[0] for fit in fitnesses]  
         separations = [fit[1] for fit in fitnesses]  
         plt.scatter(separations, distances, color='blue')
-        plt.xlabel('Separation (lower is better)')
-        plt.ylabel('Distance (higher is better)')
-        plt.title('Pareto Front: Distance vs Separation')
+        plt.xlabel('Separation') #(lower is better)
+        plt.ylabel('Velocity') #(higher is better)
+        plt.title('Pareto Front: Velocity vs Separation')
         plt.grid(True)
         plt.savefig(output_file)
         plt.close()
@@ -139,7 +140,7 @@ def run_EA_single(ea_single, world):
 
     return best_individual, best_fitness
 
-def generate_best_individual_video(world, best_individual, video_name: str = 'EvoRob4_video7.mp4'):
+def generate_best_individual_video(world, best_individual, video_name: str = 'EvoRob4_video10.mp4'):
     world.controller.geno2pheno(best_individual)
     env = gym.make(ENV_NAME,
                    robot_path=world.world_file,
@@ -211,33 +212,34 @@ def main():
     visualise_individual(genotype)
     world = AntWorld()
     n_parameters = world.n_params
-    print("n_parameters : ", n_parameters)
-    population_size = 30 #250
-    CMAES_opts["min"] = -1
-    CMAES_opts["max"] = 1
-    CMAES_opts["num_generations"] = 20
-    CMAES_opts["mutation_sigma"] = 0.33
-    results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'single')
-    ea_single = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
-    best_individual, best_fitness = run_EA_single(ea_single, world)
-    print(f"Best fitness achieved: {best_fitness}")
-    generate_best_individual_video(world, best_individual)
-    
-    # population_size = 20
-    # NSGA_opts["min"] = -1
-    # NSGA_opts["max"] = 1
-    # NSGA_opts["num_parents"] = population_size
-    # NSGA_opts["num_generations"] = 20
-    # NSGA_opts["mutation_prob"] = 0.3
-    # NSGA_opts["crossover_prob"] = 0.5
+    # print("n_parameters : ", n_parameters)
 
-    # results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'multi')
-    # ea_multi_obj = NSGAII_sol(population_size, n_parameters, NSGA_opts, results_dir)
-
-    # pareto_front, pareto_fitnesses = run_EA_multi(ea_multi_obj, world)
-    # world.visualize_pareto_front(pareto_front, pareto_fitnesses)
-    # best_individual = np.load(os.path.join(results_dir, "19", "x_best.npy"))
+    # population_size = 30 #250
+    # CMAES_opts["min"] = -1
+    # CMAES_opts["max"] = 1
+    # CMAES_opts["num_generations"] = 10
+    # CMAES_opts["mutation_sigma"] = 0.33
+    # results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'single')
+    # ea_single = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
+    # best_individual, best_fitness = run_EA_single(ea_single, world)
+    # print(f"Best fitness achieved: {best_fitness}")
     # generate_best_individual_video(world, best_individual)
+    
+    population_size = 20
+    NSGA_opts["min"] = -1
+    NSGA_opts["max"] = 1
+    NSGA_opts["num_parents"] = population_size
+    NSGA_opts["num_generations"] = 20
+    NSGA_opts["mutation_prob"] = 0.3
+    NSGA_opts["crossover_prob"] = 0.5
+
+    results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'multi')
+    ea_multi_obj = NSGAII_sol(population_size, n_parameters, NSGA_opts, results_dir)
+
+    pareto_front, pareto_fitnesses = run_EA_multi(ea_multi_obj, world)
+    world.visualize_pareto_front(pareto_front, pareto_fitnesses)
+    best_individual = np.load(os.path.join(results_dir, "19", "x_best.npy"))
+    generate_best_individual_video(world, best_individual)
 
     # print("Multi-objective optimization and video generation complete.")
 

@@ -6,6 +6,7 @@ from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.spaces import Box
 from src.utils.geometry import quat2rot
+from scipy.spatial.transform import Rotation as R
 
 DEFAULT_CAMERA_CONFIG = {
     "distance": 5,
@@ -130,29 +131,59 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             velocities.append(vel)
             forward_rewards += vel[0]  # x-velocity
 
-        forward_reward = (forward_rewards / len(self.body_ids)) * self._forward_reward_weight
+        x_velocity = forward_rewards/2.0
+        forward_reward = forward_rewards * self._forward_reward_weight
 
         distance = np.linalg.norm(xy_positions_after[0] - xy_positions_after[1])
-        separation_penalty = 1.0 * distance  
+        separation_penalty = (10.0 * distance)/len(self.body_ids)
 
         healthy_reward = 1.0
         ctrl_cost = np.linalg.norm(action) ** 2 * self._ctrl_cost_weight
         cfrc_cost = np.linalg.norm(self.data.cfrc_ext[1:]) ** 2 * self._cfrc_cost_weight
 
-        reward = healthy_reward + 3.0*forward_reward - ctrl_cost - cfrc_cost - separation_penalty
+        # print("\n ctrl_cost : ", ctrl_cost) #value around 6 or 7
+        # print("\n cfrc_cost : ", cfrc_cost) #value close to 0, sometimes goes up to 4
+
+        forward_reward = (forward_rewards / len(self.body_ids)) * 1000.0
+        # print("forward speed : ", forward_reward)
+        # print("separation penalty : ", separation_penalty)
+
+        #print forward_reward and other costs to see the order of magnitude to adapt the coeff
+        reward = healthy_reward + forward_reward - ctrl_cost - cfrc_cost - separation_penalty
         observation = self._get_obs()
 
         info = {
             "reward_forward": forward_reward,
+            "vel_x": x_velocity,
             "healthy_reward": healthy_reward,
             "ctrl_cost": ctrl_cost,
             "cfrc_cost": cfrc_cost,
             "distance_from_origin": np.linalg.norm(self.data.qpos[0:2], ord=2),
             "separation" : separation_penalty,
+            "inter_distance":distance,
         }
 
         terminated = False
         qacc = self.data.qacc
+
+        # print("qpos shape : ", self.data.qpos.shape)
+        # print(dir(self.data))
+
+        # if (forward_reward < 200) : #try 400 ?
+        #     terminated = True
+        
+        # for body_id in self.body_ids:
+        #     quat = self.data.xquat[body_id]  # [w, x, y, z]
+        #     rot = R.from_quat([quat[1], quat[2], quat[3], quat[0]])  #convert to [x, y, z, w]
+        #     euler = rot.as_euler('xyz', degrees=True)
+        #     roll, pitch, _ = euler
+
+        #     if abs(roll) > 70 or abs(pitch) > 70:
+        #         # print(f"Terminating due to rotation: body {body_id}, roll={roll:.2f}, pitch={pitch:.2f}")
+        #         terminated = True
+
+        #     info[f"body_{body_id}_roll"] = roll
+        #     info[f"body_{body_id}_pitch"] = pitch
 
         if np.any(np.isnan(qacc)) or np.any(np.isinf(qacc)) or np.any(np.abs(qacc) > 1e6):
             terminated = True
