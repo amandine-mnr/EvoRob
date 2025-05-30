@@ -18,27 +18,18 @@ class AntWorld(World):
     def __init__(self):
         # self.env = gym.make(ENV_NAME)
         self.world_file = os.path.join(ROOT_DIR, 'AntEnv.xml')
-        self.n_steps = 1000
+        self.n_steps = 5000
         self.env = gym.make(
                     ENV_NAME,
                     robot_path=self.world_file,
                     reset_noise_scale=0.1,
                     max_episode_steps=self.n_steps,
                 )
-        # action_space = self.env.action_space.shape[0] # https://gymnasium.farama.org/environments/mujoco/half_cheetah/#action-space
-        # state_space = self.env.observation_space.shape[0] #https://gymnasium.farama.org/environments/mujoco/half_cheetah/#observation-space
         action_space = 16  # 8 actions per robot
         state_space = 56  # 28 observations per robot
-        # print("action space : ", action_space, "  state space : ", state_space)
-        self.controller = MLP.NNController(state_space, action_space)
-        # self.dt = self.env.get_wrapper_attr('dt')
-        self.n_params = self.controller.n_params
-
-        self.n_repeats = 3 #3
-        
-        self.controller = MLP.NNController(state_space, action_space)
+        self.controller = MLP.NNController(state_space, action_space) #multi layer perceptrons
+        self.n_params = self.controller.n_params  
         self.n_weights = self.controller.n_params
-        self.n_params = self.n_weights
         self.world_file = os.path.join(ROOT_DIR, 'AntEnv.xml')
 
     def geno2pheno(self, genotype):
@@ -46,7 +37,6 @@ class AntWorld(World):
         return self.controller
 
     def evaluate_individual(self, genotype):
-        # trial_time = 50  # seconds in simulation
         n_sim_steps = self.n_steps
         self.geno2pheno(genotype)
 
@@ -59,7 +49,8 @@ class AntWorld(World):
         return np.sum(rewards_list)
 
 def run_EA(ea, world):
-    # env = gym.make(ENV_NAME)
+    fitness_hist_max = [] 
+    fitness_hist_mean = []
     for gen in range(ea.n_gen):
         pop = ea.ask()
         fitnesses_gen = np.empty(ea.n_pop)
@@ -67,13 +58,27 @@ def run_EA(ea, world):
         for index, genotype in enumerate(pop):
             fit_ind = world.evaluate_individual(genotype)
             fitnesses_gen[index] = fit_ind
+        best_fitness = np.max(fitnesses_gen)
+        mean_fitness = np.mean(fitnesses_gen)
+        fitness_hist_max.append(best_fitness)
+        fitness_hist_mean.append(mean_fitness)
         ea.tell(pop, fitnesses_gen)
     # env.close()
+    plt.figure(figsize=(10, 6))
+    plt.plot(fitness_hist_max, label='Best fitness per generation')
+    plt.plot(fitness_hist_mean, label='Mean fitness per generation')
+    plt.xlabel('Generation')
+    plt.ylabel('Fitness')
+    plt.title('Evolution of fitness over generations')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
 
 
 def generate_best_individual_video(controller, video_name: str = 'EvoRob4_video12.mp4'):
-    # TODO: Make a video of the best individual, and plot the fitness curve.
-    # env = gym.make(ENV_NAME, render_mode="rgb_array")
     robot_path = os.path.join(get_project_root(), 'AntEnv.xml')
     env = gym.make(
         ENV_NAME,
@@ -90,9 +95,22 @@ def generate_best_individual_video(controller, video_name: str = 'EvoRob4_video1
         action = controller.get_action(observations)
         observations, rewards, terminated, truncated, info = env.step(action)
         rewards_list.append(rewards)
-        if terminated:
-            break
+        # if terminated:
+        #     break
     print(np.sum(rewards_list))
+
+    cumulative_rewards = np.cumsum(rewards_list)
+
+    # Plotting the fitness curve
+    plt.figure(figsize=(10, 6))
+    plt.plot(cumulative_rewards, label='Cumulative reward')
+    plt.xlabel('Simulation step')
+    plt.ylabel('Cumulative reward')
+    plt.title(f'Fitness Curve')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
     import imageio
     imageio.mimsave(video_name, frames, fps=30)  # Set frames per second (fps)
@@ -108,10 +126,10 @@ def main():
     # ES_opts["num_parents"] = 100
     # ES_opts["num_generations"] = 100
     # ES_opts["mutation_sigma"] = .5
-    population_size = 30 #250
-    CMAES_opts["min"] = -1
-    CMAES_opts["max"] = 1
-    CMAES_opts["num_generations"] = 30
+    population_size = 40 #250
+    CMAES_opts["min"] = -10
+    CMAES_opts["max"] = 10
+    CMAES_opts["num_generations"] = 20
     CMAES_opts["mutation_sigma"] = 0.33
 
     population_size = 50
@@ -123,10 +141,10 @@ def main():
     run_EA(ea, world)
 
     # %% Make video of best behaviour
-    best_individual = np.load(os.path.join(results_dir, "29", "x_best.npy"))
+    best_individual = np.load(os.path.join(results_dir, "19", "x_best.npy"))
     world.controller.geno2pheno(best_individual)
 
-    generate_best_individual_video(world.controller, 'EA_best3.mp4')
+    generate_best_individual_video(world.controller, 'EA_best8.mp4')
 
 
 if __name__ == "__main__":

@@ -144,12 +144,14 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         # print("\n ctrl_cost : ", ctrl_cost) #value around 6 or 7
         # print("\n cfrc_cost : ", cfrc_cost) #value close to 0, sometimes goes up to 4
 
+        reward = forward_reward
         forward_reward = (forward_rewards / len(self.body_ids)) * 1000.0
         # print("forward speed : ", forward_reward)
         # print("separation penalty : ", separation_penalty)
 
         #print forward_reward and other costs to see the order of magnitude to adapt the coeff
-        reward = healthy_reward + forward_reward - ctrl_cost - cfrc_cost - separation_penalty
+        # reward = healthy_reward + forward_reward - ctrl_cost - cfrc_cost - separation_penalty
+        
         observation = self._get_obs()
 
         info = {
