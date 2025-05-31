@@ -9,7 +9,7 @@ from src.utils.geometry import quat2rot
 from scipy.spatial.transform import Rotation as R
 
 DEFAULT_CAMERA_CONFIG = {
-    "distance": 5,
+    "distance": 20,
 }
 
 
