@@ -52,10 +52,12 @@ def run_EA(ea, world):
     fitness_hist_max = [] 
     fitness_hist_mean = []
     for gen in range(ea.n_gen):
+        print("Generation ", gen)
         pop = ea.ask()
         fitnesses_gen = np.empty(ea.n_pop)
         # env.reset()
         for index, genotype in enumerate(pop):
+            world.geno2pheno(genotype)
             fit_ind = world.evaluate_individual(genotype)
             fitnesses_gen[index] = fit_ind
         best_fitness = np.max(fitnesses_gen)
@@ -126,13 +128,11 @@ def main():
     # ES_opts["num_parents"] = 100
     # ES_opts["num_generations"] = 100
     # ES_opts["mutation_sigma"] = .5
-    population_size = 40 #250
+    population_size = 100 #250
     CMAES_opts["min"] = -10
     CMAES_opts["max"] = 10
     CMAES_opts["num_generations"] = 20
     CMAES_opts["mutation_sigma"] = 0.33
-
-    population_size = 50
 
     results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'CMAES')
     # ea = ES(population_size, n_parameters, ES_opts, results_dir)
@@ -144,7 +144,7 @@ def main():
     best_individual = np.load(os.path.join(results_dir, "19", "x_best.npy"))
     world.controller.geno2pheno(best_individual)
 
-    generate_best_individual_video(world.controller, 'EA_best8.mp4')
+    generate_best_individual_video(world.controller, 'EA_best12.mp4')
 
 
 if __name__ == "__main__":

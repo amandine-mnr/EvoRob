@@ -9,7 +9,7 @@ from src.utils.geometry import quat2rot
 from scipy.spatial.transform import Rotation as R
 
 DEFAULT_CAMERA_CONFIG = {
-    "distance": 5,
+    "distance": 20,
 }
 
 
@@ -130,12 +130,13 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
             vel = (after - before) / self.dt
             velocities.append(vel)
             forward_rewards += vel[0]  # x-velocity
+        forward_reward = np.linalg.norm(np.array(xy_positions_after)-np.array(xy_positions_before))
 
         x_velocity = forward_rewards/2.0
         forward_reward = forward_rewards * self._forward_reward_weight
 
         distance = np.linalg.norm(xy_positions_after[0] - xy_positions_after[1])
-        separation_penalty = (10.0 * distance)/len(self.body_ids)
+        separation_penalty = (distance)/len(self.body_ids)
 
         healthy_reward = 1.0
         ctrl_cost = np.linalg.norm(action) ** 2 * self._ctrl_cost_weight
@@ -144,7 +145,7 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         # print("\n ctrl_cost : ", ctrl_cost) #value around 6 or 7
         # print("\n cfrc_cost : ", cfrc_cost) #value close to 0, sometimes goes up to 4
 
-        reward = forward_reward
+        reward = 2.0*forward_reward - separation_penalty
         forward_reward = (forward_rewards / len(self.body_ids)) * 1000.0
         # print("forward speed : ", forward_reward)
         # print("separation penalty : ", separation_penalty)
