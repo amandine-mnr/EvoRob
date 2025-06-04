@@ -128,7 +128,7 @@ def main():
     # ES_opts["num_parents"] = 100
     # ES_opts["num_generations"] = 100
     # ES_opts["mutation_sigma"] = .5
-    population_size = 100 #250
+    population_size = 40 #250
     CMAES_opts["min"] = -10
     CMAES_opts["max"] = 10
     CMAES_opts["num_generations"] = 20
