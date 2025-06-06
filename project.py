@@ -21,7 +21,7 @@ class AntWorld(World):
 
         self.n_repeats = 3 #3
         self.n_steps = 1000
-        self.controller = MLP.NNController(state_space, action_space)
+        self.controller = MLP.NN_najaroController(state_space, action_space)
         self.n_weights = self.controller.n_params
         self.n_params = self.n_weights
         self.world_file = os.path.join(ROOT_DIR, 'AntEnv.xml')
@@ -109,7 +109,7 @@ class AntWorld(World):
         envs.close()
         return np.mean(final_rewards), np.mean(final_multi_obj_rewards, axis=0)
 
-    def visualize_pareto_front(self, pareto_front, fitnesses, output_file='pareto_front3.png'):
+    def visualize_pareto_front(self, pareto_front, fitnesses, output_file='pareto_front7.png'):
         plt.figure()
         distances = [fit[0] for fit in fitnesses]  
         separations = [fit[1] for fit in fitnesses]  
@@ -140,7 +140,7 @@ def run_EA_single(ea_single, world):
 
     return best_individual, best_fitness
 
-def generate_best_individual_video(world, best_individual, video_name: str = 'EvoRob4_video11.mp4'):
+def generate_best_individual_video(world, best_individual, video_name: str = 'EvoRob4_video16.mp4'):
     world.controller.geno2pheno(best_individual)
     env = gym.make(ENV_NAME,
                    robot_path=world.world_file,
@@ -182,6 +182,24 @@ def visualise_individual(genotype):
     env.close()
     print(np.sum(rewards_list))
 
+def is_dominated(p1, p2):
+    return all(p2 <= p1) and any(p2 < p1)
+
+def get_non_dominated_set(population, fitnesses):
+    non_dominated = []
+    non_dominated_fitnesses = []
+
+    for i, fit_i in enumerate(fitnesses):
+        dominated = False
+        for j, fit_j in enumerate(fitnesses):
+            if i != j and is_dominated(fit_i, fit_j):
+                dominated = True
+                break
+        if not dominated:
+            non_dominated.append(population[i])
+            non_dominated_fitnesses.append(fitnesses[i])
+    return non_dominated, non_dominated_fitnesses
+
 def run_EA_multi(ea_multi, world):
     pareto_front = []
     pareto_fitnesses = []
@@ -190,18 +208,22 @@ def run_EA_multi(ea_multi, world):
         print(f"Generation {gen}")
         pop = ea_multi.ask()
         fitnesses_gen = np.empty((len(pop), 2))
+
         for index, genotype in enumerate(pop):
             _, fit_ind = world.evaluate_individual_multi(genotype)
             fitnesses_gen[index] = fit_ind
 
         ea_multi.tell(pop, fitnesses_gen)
 
-        # Update Pareto front
-        for idx, ind in enumerate(ea_multi.x):            
-            pareto_front.append(ind)
-            pareto_fitnesses.append(fitnesses_gen[idx])
+        # Combine previous Pareto front with current generation
+        combined_pop = pareto_front + list(pop)
+        combined_fitnesses = np.vstack([pareto_fitnesses, fitnesses_gen]) if pareto_fitnesses else fitnesses_gen
+
+        # Get updated non-dominated front
+        pareto_front, pareto_fitnesses = get_non_dominated_set(combined_pop, combined_fitnesses)
 
     return pareto_front, pareto_fitnesses
+
 
 def main():
     world = AntWorld()
@@ -214,32 +236,32 @@ def main():
     n_parameters = world.n_params
     # print("n_parameters : ", n_parameters)
 
-    # population_size = 30 #250
-    # CMAES_opts["min"] = -1
-    # CMAES_opts["max"] = 1
-    # CMAES_opts["num_generations"] = 10
-    # CMAES_opts["mutation_sigma"] = 0.33
-    # results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'single')
-    # ea_single = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
-    # best_individual, best_fitness = run_EA_single(ea_single, world)
-    # print(f"Best fitness achieved: {best_fitness}")
-    # generate_best_individual_video(world, best_individual)
-    
-    population_size = 80
-    NSGA_opts["min"] = -10
-    NSGA_opts["max"] = 10
-    NSGA_opts["num_parents"] = population_size
-    NSGA_opts["num_generations"] = 40
-    NSGA_opts["mutation_prob"] = 0.4
-    NSGA_opts["crossover_prob"] = 0.5
-
-    results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'multi')
-    ea_multi_obj = NSGAII_sol(population_size, n_parameters, NSGA_opts, results_dir)
-
-    pareto_front, pareto_fitnesses = run_EA_multi(ea_multi_obj, world)
-    world.visualize_pareto_front(pareto_front, pareto_fitnesses)
-    best_individual = np.load(os.path.join(results_dir, "39", "x_best.npy"))
+    population_size = 40 #250
+    CMAES_opts["min"] = -1
+    CMAES_opts["max"] = 1
+    CMAES_opts["num_generations"] = 20
+    CMAES_opts["mutation_sigma"] = 0.33
+    results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'single')
+    ea_single = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
+    best_individual, best_fitness = run_EA_single(ea_single, world)
+    print(f"Best fitness achieved: {best_fitness}")
     generate_best_individual_video(world, best_individual)
+    
+    # population_size = 80
+    # NSGA_opts["min"] = -1
+    # NSGA_opts["max"] = 1
+    # NSGA_opts["num_parents"] = population_size
+    # NSGA_opts["num_generations"] = 20
+    # NSGA_opts["mutation_prob"] = 0.4
+    # NSGA_opts["crossover_prob"] = 0.5
+
+    # results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'multi')
+    # ea_multi_obj = NSGAII_sol(population_size, n_parameters, NSGA_opts, results_dir)
+
+    # pareto_front, pareto_fitnesses = run_EA_multi(ea_multi_obj, world)
+    # world.visualize_pareto_front(pareto_front, pareto_fitnesses)
+    # best_individual = np.load(os.path.join(results_dir, "19", "x_best.npy"))
+    # generate_best_individual_video(world, best_individual)
 
     print("Multi-objective optimization and video generation complete.")
 
