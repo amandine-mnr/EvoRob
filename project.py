@@ -27,7 +27,7 @@ class AntWorld(World):
                 )
         action_space = 16  # 8 actions per robot
         state_space = 56  # 28 observations per robot
-        self.controller = MLP.NNController(state_space, action_space) #multi layer perceptrons
+        self.controller = MLP.NN_najaroController(state_space, action_space) #multi layer perceptrons
         self.n_params = self.controller.n_params  
         self.n_weights = self.controller.n_params
         self.world_file = os.path.join(ROOT_DIR, 'AntEnv.xml')
@@ -128,9 +128,9 @@ def main():
     # ES_opts["num_parents"] = 100
     # ES_opts["num_generations"] = 100
     # ES_opts["mutation_sigma"] = .5
-    population_size = 100 #250
-    CMAES_opts["min"] = -10
-    CMAES_opts["max"] = 10
+    population_size = 80 #250
+    CMAES_opts["min"] = -1
+    CMAES_opts["max"] = 1
     CMAES_opts["num_generations"] = 20
     CMAES_opts["mutation_sigma"] = 0.33
 
@@ -144,7 +144,7 @@ def main():
     best_individual = np.load(os.path.join(results_dir, "19", "x_best.npy"))
     world.controller.geno2pheno(best_individual)
 
-    generate_best_individual_video(world.controller, 'EA_best12.mp4')
+    generate_best_individual_video(world.controller, 'EA_best16.mp4')
 
 
 if __name__ == "__main__":
