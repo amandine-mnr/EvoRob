@@ -131,17 +131,18 @@ def main():
     population_size = 80 #250
     CMAES_opts["min"] = -1
     CMAES_opts["max"] = 1
-    CMAES_opts["num_generations"] = 20
+    CMAES_opts["num_generations"] = 10
     CMAES_opts["mutation_sigma"] = 0.33
 
     results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'CMAES')
     # ea = ES(population_size, n_parameters, ES_opts, results_dir)
-    ea = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
+    # ea = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
 
-    run_EA(ea, world)
+    # run_EA(ea, world)
 
     # %% Make video of best behaviour
-    best_individual = np.load(os.path.join(results_dir, "19", "x_best.npy"))
+    last_gen = str(NSGA_opts["num_generations"] - 1)
+    best_individual = np.load(os.path.join(results_dir, "9", "x_best.npy"))
     world.controller.geno2pheno(best_individual)
 
     generate_best_individual_video(world.controller, 'EA_best16.mp4')

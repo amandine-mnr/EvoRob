@@ -175,18 +175,18 @@ class AntCustomEnv(MujocoEnv, utils.EzPickle):
         # if (forward_reward < 200) : #try 400 ?
         #     terminated = True
         
-        # for body_id in self.body_ids:
-        #     quat = self.data.xquat[body_id]  # [w, x, y, z]
-        #     rot = R.from_quat([quat[1], quat[2], quat[3], quat[0]])  #convert to [x, y, z, w]
-        #     euler = rot.as_euler('xyz', degrees=True)
-        #     roll, pitch, _ = euler
+        for body_id in self.body_ids:
+            quat = self.data.xquat[body_id]  # [w, x, y, z]
+            rot = R.from_quat([quat[1], quat[2], quat[3], quat[0]])  #convert to [x, y, z, w]
+            euler = rot.as_euler('xyz', degrees=True)
+            roll, pitch, _ = euler
 
-        #     if abs(roll) > 70 or abs(pitch) > 70:
-        #         # print(f"Terminating due to rotation: body {body_id}, roll={roll:.2f}, pitch={pitch:.2f}")
-        #         terminated = True
+            if abs(roll) > 70 or abs(pitch) > 70:
+                # print(f"Terminating due to rotation: body {body_id}, roll={roll:.2f}, pitch={pitch:.2f}")
+                terminated = True
 
-        #     info[f"body_{body_id}_roll"] = roll
-        #     info[f"body_{body_id}_pitch"] = pitch
+            info[f"body_{body_id}_roll"] = roll
+            info[f"body_{body_id}_pitch"] = pitch
 
         if np.any(np.isnan(qacc)) or np.any(np.isinf(qacc)) or np.any(np.abs(qacc) > 1e6):
             terminated = True

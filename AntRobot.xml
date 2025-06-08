@@ -80,14 +80,14 @@
         </body>
     </worldbody>
     <actuator>
-        <motor gear="150" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_Base=rod_0.1"/>
-        <motor gear="150" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_rod_0.1=rod_1.2"/>
-        <motor gear="150" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_Base=rod_3.4"/>
-        <motor gear="150" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_rod_3.4=rod_4.5"/>
-        <motor gear="150" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_Base=rod_6.7"/>
-        <motor gear="150" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_rod_6.7=rod_7.8"/>
-        <motor gear="150" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_Base=rod_9.10"/>
-        <motor gear="150" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_rod_9.10=rod_10.11"/>
+        <motor gear="100" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_Base=rod_0.1"/>
+        <motor gear="100" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_rod_0.1=rod_1.2"/>
+        <motor gear="100" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_Base=rod_3.4"/>
+        <motor gear="100" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_rod_3.4=rod_4.5"/>
+        <motor gear="100" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_Base=rod_6.7"/>
+        <motor gear="100" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_rod_6.7=rod_7.8"/>
+        <motor gear="100" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_Base=rod_9.10"/>
+        <motor gear="100" ctrlrange="-1.0 1.0" ctrllimited="true" joint="joint_rod_9.10=rod_10.11"/>
     </actuator>
     <sensor>
         <accelerometer site="site_0.1"/>
